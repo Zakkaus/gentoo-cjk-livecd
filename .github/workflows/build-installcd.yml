@@ -9,6 +9,11 @@ on:
       - 'releases/portage/isos-cjk/**'
       - 'releases/specs/amd64/installcd-cjk-*'
   workflow_dispatch:
+  # The seed stage3 and the stable branch both move, so a weekly run keeps the
+  # image current and catches upstream drift while it is still one change.
+  # GitHub disables a schedule after 60 days without repository activity.
+  schedule:
+    - cron: '17 4 * * 1'
 
 # Separate jobs, each capped at six hours. stage1 measured 1h22m on 2026-08-10,
 # so this is headroom; rebuilding the image per job costs about seven minutes.
@@ -89,7 +94,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: install-amd64-cjk-minimal
-          retention-days: 7
+          # Longer than the weekly cadence, so one image is always downloadable.
+          retention-days: 14
           compression-level: 0
           path: /mnt/output/*
 

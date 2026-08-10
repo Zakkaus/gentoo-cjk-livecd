@@ -1,0 +1,3 @@
+# gentoo-cjk-kernel-bin PDEPENDs on the overlay's copy, which is ~amd64. Scoped
+# to the repo so ::gentoo's own virtual keeps its stable keyword.
+virtual/dist-kernel::gentoo-zh ~amd64

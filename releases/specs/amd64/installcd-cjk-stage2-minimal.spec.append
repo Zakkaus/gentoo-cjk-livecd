@@ -1,0 +1,15 @@
+# Appended to installcd-stage2-minimal.spec by docker/build-installcd.sh, where
+# a later key replaces an earlier one. This is the whole deviation.
+
+repos: @STOREDIR@/repos/gentoo-zh
+portage_confdir: @STOREDIR@/portage-confdir
+
+boot/kernel/gentoo/sources: sys-kernel/gentoo-cjk-kernel-bin
+
+# A prebuilt kernel has no build phase, so the config fragment would be copied
+# into /etc/kernel/config.d and never read. An empty key deletes it.
+boot/kernel/gentoo/config:
+
+# @TIMESTAMP@ is the seed's, which does not change when the tree does.
+livecd/iso: install-amd64-cjk-minimal-@TREESTAMP@.iso
+livecd/volid: Gentoo-CJK-amd64-@DATESTAMP@

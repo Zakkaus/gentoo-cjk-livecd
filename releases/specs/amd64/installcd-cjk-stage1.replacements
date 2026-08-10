@@ -1,0 +1,8 @@
+# "old new" per line, for packages the official stage1 spec lists that
+# ::gentoo has masked. Delete a line once upstream carries the replacement.
+
+# bug #942397
+app-arch/p7zip		app-arch/7zip
+
+# bug #977172; bind 9.20 ships dig and host itself
+net-dns/bind-tools	net-dns/bind

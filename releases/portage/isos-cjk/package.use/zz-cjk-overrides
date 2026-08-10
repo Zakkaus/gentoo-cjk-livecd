@@ -1,0 +1,4 @@
+# The official confdir sets symlink for the genkernel path. With a dist-kernel
+# it repoints /usr/src/linux at unconfigured sources after kmerge.sh has aimed
+# it at the kernel just installed, and the modules then fail to build.
+sys-kernel/gentoo-sources -symlink

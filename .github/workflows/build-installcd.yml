@@ -1,0 +1,126 @@
+name: Build the CJK minimal installation CD
+
+on:
+  push:
+    branches: [gentoo-cjk]
+    paths:
+      - '.github/workflows/build-installcd.yml'
+      - 'docker/**'
+      - 'releases/portage/isos-cjk/**'
+      - 'releases/specs/amd64/installcd-cjk-*'
+  workflow_dispatch:
+
+# Separate jobs, each capped at six hours. stage1 measured 1h22m on 2026-08-10,
+# so this is headroom; rebuilding the image per job costs about seven minutes.
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the container image
+        run: docker build -t gentoo-cjk-livecd -f docker/Dockerfile .
+
+      - name: Resolve both package lists
+        run: docker run --rm gentoo-cjk-livecd preflight
+
+  stage1:
+    needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the container image
+        run: docker build -t gentoo-cjk-livecd -f docker/Dockerfile .
+
+      - name: Build livecd-stage1
+        run: |
+          sudo install -d /mnt/catalyst
+          docker run --rm --privileged \
+            -v /dev:/dev \
+            -v /mnt/catalyst:/var/tmp/catalyst \
+            gentoo-cjk-livecd stage1
+
+      # The container writes as root and the upload step runs as the runner.
+      - name: Make the storedir readable
+        run: sudo chmod -R a+rX /mnt/catalyst
+
+      - name: Upload the stage1 seed
+        uses: actions/upload-artifact@v7
+        with:
+          name: livecd-stage1
+          retention-days: 1
+          # Already xz and squashfs; recompressing costs minutes and saves none.
+          compression-level: 0
+          path: |
+            /mnt/catalyst/build.env
+            /mnt/catalyst/snapshots/*.sqfs
+            /mnt/catalyst/builds/23.0-default/livecd-stage1-*.tar.xz
+
+  stage2:
+    needs: stage1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the container image
+        run: docker build -t gentoo-cjk-livecd -f docker/Dockerfile .
+
+      # /mnt belongs to root and the download step runs as the runner.
+      - name: Prepare the storedir
+        run: sudo install -d -o "$(id -u)" -g "$(id -g)" /mnt/catalyst
+
+      - name: Restore the stage1 seed
+        uses: actions/download-artifact@v8
+        with:
+          name: livecd-stage1
+          path: /mnt/catalyst
+
+      - name: Build livecd-stage2
+        run: |
+          sudo install -d -m 0777 /mnt/output
+          docker run --rm --privileged \
+            -v /dev:/dev \
+            -v /mnt/catalyst:/var/tmp/catalyst \
+            -v /mnt/output:/output \
+            gentoo-cjk-livecd stage2
+
+      - name: Upload the ISO
+        uses: actions/upload-artifact@v7
+        with:
+          name: install-amd64-cjk-minimal
+          retention-days: 7
+          compression-level: 0
+          path: /mnt/output/*
+
+  # An image that builds is not an image that boots, and only this job can tell
+  # the two apart.
+  boot-test:
+    needs: stage2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install QEMU and xorriso
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qemu-system-x86 xorriso
+          # The runner has /dev/kvm but the runner user is not in the kvm group.
+          sudo chmod 0666 /dev/kvm 2>/dev/null || echo "no /dev/kvm; qemu uses TCG"
+          ls -l /dev/kvm 2>/dev/null || true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: install-amd64-cjk-minimal
+          path: iso
+
+      # TCG needs far longer than the local default of ten minutes.
+      - name: Boot the image
+        run: python3 tests/boot-test.py iso/*.iso --log boot-test.log --timeout 2400
+
+      - name: Upload the serial log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: boot-test-log
+          path: boot-test.log

@@ -1,1 +1,3 @@
 tools-musl/stage4-hardened-amd64-configured.spec
+__pycache__/
+*.pyc

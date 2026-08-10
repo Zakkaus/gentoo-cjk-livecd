@@ -1,0 +1,2 @@
+# catalyst has empty KEYWORDS. The upper bound keeps the live ebuild out.
+<dev-util/catalyst-9999 **

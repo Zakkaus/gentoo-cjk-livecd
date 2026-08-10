@@ -1,0 +1,3 @@
+# gentoo-zh masks its own copy as incompatible with ::gentoo's, and
+# gentoo-cjk-kernel-bin needs it.
+virtual/dist-kernel

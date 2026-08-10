@@ -1,0 +1,5 @@
+dev-util/catalyst iso
+
+# catalyst imports libmount, and catalyst[iso] needs both EFI grub platforms.
+sys-apps/util-linux python
+sys-boot/grub grub_platforms_efi-32 grub_platforms_efi-64 grub_platforms_pc

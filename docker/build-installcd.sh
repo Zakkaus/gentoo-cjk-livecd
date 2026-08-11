@@ -84,30 +84,29 @@ fetch_overlay() {
 		log "gentoo-zh no longer masks virtual/dist-kernel; the unmask in releases/portage/isos-cjk is now inert"
 }
 
-# Returns the seed timestamp on stdout; everything else goes to stderr.
+# Sets TIMESTAMP. Not a command substitution: errexit does not apply inside one,
+# so a failed verify_seed there would be ignored and the seed used anyway.
 fetch_seed() {
-	local listing path tarball timestamp dest
+	local listing path tarball dest
 	listing=$(wget -qO- "${AUTOBUILDS_URI}/latest-stage3-amd64-openrc.txt")
 	path=$(grep -E '^[0-9]{8}T[0-9]{6}Z/stage3-amd64-openrc-.*\.tar\.xz' <<<"${listing}" | awk '{print $1}')
 	[[ -n ${path} ]] || { echo "no stage3 in latest-stage3-amd64-openrc.txt" >&2; exit 1; }
 
 	tarball=${path##*/}
-	timestamp=${tarball#stage3-amd64-openrc-}
-	timestamp=${timestamp%.tar.xz}
+	TIMESTAMP=${tarball#stage3-amd64-openrc-}
+	TIMESTAMP=${TIMESTAMP%.tar.xz}
 	dest=${STOREDIR}/builds/${REL_TYPE}/${tarball}
 
 	if [[ ! -s ${dest} ]]; then
 		mkdir -p "${dest%/*}"
 		# catalyst searches that directory by extension, so a signature beside
 		# the seed reads as a second match.
-		wget -q -O "${dest}.part" "${AUTOBUILDS_URI}/${path}" >&2
-		wget -q -O "${STOREDIR}/seed.asc" "${AUTOBUILDS_URI}/${path}.asc" >&2
-		verify_seed "${dest}.part" "${STOREDIR}/seed.asc" >&2
+		wget -q -O "${dest}.part" "${AUTOBUILDS_URI}/${path}"
+		wget -q -O "${STOREDIR}/seed.asc" "${AUTOBUILDS_URI}/${path}.asc"
+		verify_seed "${dest}.part" "${STOREDIR}/seed.asc"
 		rm -f "${STOREDIR}/seed.asc"
 		mv "${dest}.part" "${dest}"
 	fi
-
-	echo "${timestamp}"
 }
 
 verify_seed() {
@@ -122,7 +121,7 @@ verify_seed() {
 # matching is how a build succeeds with the wrong package set.
 replace_packages() {
 	local spec=$1 table=$2 old new
-	while read -r old new; do
+	while read -r old new || [[ -n ${old} ]]; do
 		[[ -z ${old} || ${old} == "#"* ]] && continue
 		grep -qxF "$(printf '\t%s' "${old}")" "${spec}" ||
 			{ echo "${spec} no longer lists ${old}" >&2; exit 1; }
@@ -212,8 +211,10 @@ check_kernel_available() {
 	echo "kernel ${chosen} is the newest below ${bound}"
 }
 
-# Tab-indented values under a list key, which is how catalyst writes them.
+# Tab-indented values under a list key, which is how catalyst writes them. An
+# absent key would otherwise resolve to an empty list and verify nothing.
 spec_list() {
+	grep -q "^$1:" "$2" || { echo "$2 has no $1 key" >&2; exit 1; }
 	awk -v key="$1:" '$0 == key { grab = 1; next }
 		grab && /^\t/ { print $1; next }
 		grab { exit }' "$2"
@@ -289,7 +290,7 @@ build_stage1() {
 	write_envscript stage1
 
 	log "Fetching the stage3 seed"
-	TIMESTAMP=$(fetch_seed)
+	fetch_seed
 	echo "seed timestamp ${TIMESTAMP}"
 
 	log "Creating the ebuild repo snapshot"
@@ -353,6 +354,7 @@ build_stage2() {
 	log "Collecting the image"
 	mkdir -p "${OUTPUT_DIR}"
 	local iso=${STOREDIR}/builds/${REL_TYPE}/install-amd64-cjk-minimal-${TREESTAMP}.iso
+	[[ -f ${iso} ]] || { echo "catalyst produced no ${iso}" >&2; exit 1; }
 	local artifact
 	for artifact in "${iso}" "${iso}".*; do
 		if [[ -f ${artifact} ]]; then

@@ -54,13 +54,13 @@ Catalyst の spec パーサーは後に現れたキーで前のキーを置き�
 
 検証
 ----
-`install-amd64-cjk-minimal-20260809T143052Z.iso`、0.92 GiB。2026-08-10 に CI が生成
+`install-amd64-cjk-minimal-20260829T210059Z.iso`、0.93 GiB。2026-08-29 に CI が生成
 し、KVM で起動しました。`tests/boot-test.py` の結果は次のとおりです。
 
-    ok    kernel: 6.18.43-gentoo-cjk-dist-bin
+    ok    kernel: 7.1.12-gentoo-cjk-dist-bin
     ok    zfs: zfs-loaded
     ok    zpool: no pools available to import
-    ok    cjk-console: CONFIG_FRAMEBUFFER_CONSOLE=y CONFIG_FONT_CJK_16x16=y
+    ok    cjk-console: CONFIG_FRAMEBUFFER_CONSOLE=y CONFIG_FONT_CJK=y CONFIG_FONT_CJK_16x16=y
     ok    storage-tools: listed
 
 シリアルコンソールが伝えるのはバイト列であって字形ではないため、画面に CJK が描画

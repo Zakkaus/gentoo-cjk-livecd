@@ -54,13 +54,13 @@ line cannot pass unnoticed once upstream carries the replacement itself.
 
 Verification
 ------------
-`install-amd64-cjk-minimal-20260809T143052Z.iso`, 0.92 GiB, built by CI on
-2026-08-10 and booted in KVM. `tests/boot-test.py` answered:
+`install-amd64-cjk-minimal-20260829T210059Z.iso`, 0.93 GiB, built by CI on
+2026-08-29 and booted in KVM. `tests/boot-test.py` answered:
 
-    ok    kernel: 6.18.43-gentoo-cjk-dist-bin
+    ok    kernel: 7.1.12-gentoo-cjk-dist-bin
     ok    zfs: zfs-loaded
     ok    zpool: no pools available to import
-    ok    cjk-console: CONFIG_FRAMEBUFFER_CONSOLE=y CONFIG_FONT_CJK_16x16=y
+    ok    cjk-console: CONFIG_FRAMEBUFFER_CONSOLE=y CONFIG_FONT_CJK=y CONFIG_FONT_CJK_16x16=y
     ok    storage-tools: listed
 
 A serial console carries bytes, not glyphs, so whether CJK is drawn on screen is

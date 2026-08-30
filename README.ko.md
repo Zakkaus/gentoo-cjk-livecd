@@ -55,13 +55,13 @@ Catalyst의 spec 파서는 뒤에 나온 키가 앞의 키를 대체하므로, �
 
 검증
 ----
-`install-amd64-cjk-minimal-20260809T143052Z.iso`, 0.92 GiB. 2026-08-10에 CI가
+`install-amd64-cjk-minimal-20260829T210059Z.iso`, 0.93 GiB. 2026-08-29에 CI가
 생성했고 KVM에서 부팅했습니다. `tests/boot-test.py`의 결과는 다음과 같습니다.
 
-    ok    kernel: 6.18.43-gentoo-cjk-dist-bin
+    ok    kernel: 7.1.12-gentoo-cjk-dist-bin
     ok    zfs: zfs-loaded
     ok    zpool: no pools available to import
-    ok    cjk-console: CONFIG_FRAMEBUFFER_CONSOLE=y CONFIG_FONT_CJK_16x16=y
+    ok    cjk-console: CONFIG_FRAMEBUFFER_CONSOLE=y CONFIG_FONT_CJK=y CONFIG_FONT_CJK_16x16=y
     ok    storage-tools: listed
 
 시리얼 콘솔은 글리프가 아니라 바이트를 전달하므로 화면에 CJK가 그려지는지는 다루지

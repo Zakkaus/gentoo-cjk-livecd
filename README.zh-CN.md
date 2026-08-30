@@ -49,13 +49,13 @@ Catalyst 的 spec 解析器以后出现的键取代先出现的键，所以构�
 
 验证
 ----
-`install-amd64-cjk-minimal-20260809T143052Z.iso`，0.92 GiB，2026-08-10 由 CI 产出
+`install-amd64-cjk-minimal-20260829T210059Z.iso`，0.93 GiB，2026-08-29 由 CI 产出
 并在 KVM 内启动。`tests/boot-test.py` 的回答：
 
-    ok    kernel: 6.18.43-gentoo-cjk-dist-bin
+    ok    kernel: 7.1.12-gentoo-cjk-dist-bin
     ok    zfs: zfs-loaded
     ok    zpool: no pools available to import
-    ok    cjk-console: CONFIG_FRAMEBUFFER_CONSOLE=y CONFIG_FONT_CJK_16x16=y
+    ok    cjk-console: CONFIG_FRAMEBUFFER_CONSOLE=y CONFIG_FONT_CJK=y CONFIG_FONT_CJK_16x16=y
     ok    storage-tools: listed
 
 串口传输的是字节而不是字形，因此屏幕上是否画得出 CJK 不在覆盖范围内。已确立的是

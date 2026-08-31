@@ -104,6 +104,8 @@ jobs:
   boot-test:
     needs: stage2
     runs-on: ubuntu-latest
+    outputs:
+      kernel: ${{ steps.boot.outputs.kernel }}
     steps:
       - uses: actions/checkout@v7
 
@@ -122,7 +124,15 @@ jobs:
 
       # TCG needs far longer than the local default of ten minutes.
       - name: Boot the image
-        run: python3 tests/boot-test.py iso/*.iso --log boot-test.log --timeout 2400
+        id: boot
+        run: |
+          python3 tests/boot-test.py iso/*.iso --log boot-test.log --timeout 2400 >checks.txt
+          sed -n 's/^ok    kernel: /kernel=/p' checks.txt >>"$GITHUB_OUTPUT"
+
+      # A failing boot aborts the step above before its output is seen.
+      - name: Show the checks
+        if: always()
+        run: cat checks.txt
 
       - name: Upload the serial log
         if: always()
@@ -130,3 +140,59 @@ jobs:
         with:
           name: boot-test-log
           path: boot-test.log
+
+  # The build was weekly and publishing was not, so an image could sit in an
+  # artifact until it expired. A push builds for iteration and is not released.
+  release:
+    needs: boot-test
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: install-amd64-cjk-minimal
+          path: iso
+
+      - name: Publish the image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KERNEL: ${{ needs.boot-test.outputs.kernel }}
+        run: |
+          iso=$(ls iso/*.iso)
+          tag=${iso##*/install-amd64-cjk-minimal-}
+          tag=${tag%.iso}
+          if [ -z "$KERNEL" ]; then
+            echo "boot-test reported no kernel version"
+            exit 1
+          fi
+          for asset in "$iso" "$iso".sha256 "$iso".DIGESTS "$iso".CONTENTS.gz; do
+            if [ ! -f "$asset" ]; then
+              echo "missing release asset: $asset"
+              exit 1
+            fi
+          done
+          # The volume identifier is 32 bytes at 0x8028 of the ISO9660 PVD.
+          volid=$(dd if="$iso" bs=1 skip=32808 count=32 status=none \
+                  | tr -d '\0' | sed 's/ *$//')
+          size=$(( $(stat -c %s "$iso") / 1048576 ))
+          # The tag is the tree snapshot, so a rerun on an unmoved tree would
+          # rebuild an image already published.
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $tag exists; the tree snapshot has not moved"
+            exit 0
+          fi
+          printf '%s\n' \
+            "Gentoo amd64 minimal installation CD, ${size} MiB, volume id \`${volid}\`." \
+            "" \
+            "Upstream's \`install-amd64-minimal\` with the kernel replaced by" \
+            "\`${KERNEL}\`, cjktty patched, so the console renders CJK." \
+            "" \
+            "sha256sum -c ${iso##*/}.sha256" >notes.md
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Gentoo CJK minimal installation CD $tag" \
+            --notes-file notes.md \
+            "$iso" "$iso".sha256 "$iso".DIGESTS "$iso".CONTENTS.gz
